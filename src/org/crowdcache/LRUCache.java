@@ -1,4 +1,4 @@
-package org.crowdcache.approxcache;
+package org.crowdcache;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -11,7 +11,7 @@ public class LRUCache<K extends Object, V extends Object> extends LinkedHashMap<
     Integer size;
     public LRUCache(Integer size)
     {
-        super(size, 1.1f, false);
+        super(size,5.0f, false);
         this.size = size;
     }
 

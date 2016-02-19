@@ -1,4 +1,4 @@
-package org.crowdcache.approxcache;
+package org.crowdcache;
 
 /**
  * Created by utsav on 2/9/16.
@@ -13,7 +13,7 @@ public interface Cache<K extends Object, V extends Object>
     void put(K key, V value);
 
     /**
-     * Get the {@link org.crowdcache.approxcache.Cache.Result} for this key which contains the value and confidence metric
+     * Get the {@link Cache.Result} for this key which contains the value and confidence metric
      * @param key
      * @return
      */
