@@ -29,5 +29,11 @@ public interface Cache<K extends Object, V extends Object>
 
         public Double confidence;
         public  V value;
+
+        public Result(V value)
+        {
+            this.confidence = Double.MIN_VALUE;
+            this.value = value;
+        }
     }
 }
