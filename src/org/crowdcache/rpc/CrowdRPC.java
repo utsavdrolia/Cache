@@ -108,8 +108,8 @@ public class CrowdRPC
 
     /**
      * Get the value for a key by querying some peers
-     * @param descriptors The data to be queried
-     * @param callback The  {@link GetResponseCallback} to be called when key-value is found
+     * @param data The data to be queried
+     * @param callBack The  {@link GetResponseCallback} to be called when key-value is found
      * @param i Number of peers to query
      * @return
      */
