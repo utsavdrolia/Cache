@@ -106,6 +106,27 @@ public class CrowdRPC
         }
     }
 
+    /**
+     * Get the value for a key by querying some peers
+     * @param descriptors The data to be queried
+     * @param callback The  {@link GetResponseCallback} to be called when key-value is found
+     * @param i Number of peers to query
+     * @return
+     */
+    public int get(byte[] data, GetResponseCallback callBack, int i)
+    {
+        // Get new ID
+        Integer id = getnextid();
+
+        // Broadcast message
+        byte[] krowdmsg = CrowdCacheProto.CrowdCacheMsg.newBuilder().
+                setMsgType(CrowdCacheProto.CrowdCacheMsg.MsgType.GET_REQ).
+                setId(id).
+                setVal(ByteString.copyFrom(data)).
+                build().toByteArray();
+        mCallbackHandler.putCallback(id, callBack);
+        return mHyrax.multicast(krowdmsg, i);
+    }
 
     /**
      * Get the value for a key
