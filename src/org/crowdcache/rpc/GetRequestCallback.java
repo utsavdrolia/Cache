@@ -10,16 +10,16 @@ import java.nio.ByteBuffer;
  */
 public abstract class GetRequestCallback
 {
-    abstract public Cache.Result<Byte[]> get(byte[] data);
+    abstract public Cache.Result<Byte[]> get(byte[] data, Long recvdAt);
 
     /**
-     * Calls the implemented {@link GetRequestCallback#get(byte[])} and serializes the result
+     * Calls the implemented {@link GetRequestCallback#get(byte[], Long)} and serializes the result
      * @param data
      * @return
      */
-    protected byte[] _get(byte[] data)
+    protected byte[] _get(byte[] data, Long recvdAt)
     {
-        Cache.Result<Byte[]> result = get(data);
+        Cache.Result<Byte[]> result = get(data, recvdAt);
         ByteBuffer ser = ByteBuffer.allocate((Double.SIZE/8) + result.value.length);
         ser.putDouble(result.confidence);
         ser.put(ArrayUtils.toPrimitive(result.value));

@@ -7,6 +7,8 @@ import org.hyrax.Hyrax;
 
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Created by utsav on 2/19/16.
@@ -18,6 +20,7 @@ public class CrowdRPC
     private final GetRequestCallback mGetReqCB;
     private Integer msgID = 0;
     private CallbackHandler mCallbackHandler;
+    private ExecutorService getRequestExecutor = Executors.newSingleThreadExecutor();
 
     public CrowdRPC(GetRequestCallback cb)
     {
@@ -81,19 +84,29 @@ public class CrowdRPC
                     if(krowdmsg != null)
                     {
                         byte[] data = krowdmsg.getData();
-                        String cookie = krowdmsg.getCookie();
-                        CrowdCacheProto.CrowdCacheMsg msg = CrowdCacheProto.CrowdCacheMsg.parseFrom(data);
+                        final String cookie = krowdmsg.getCookie();
+                        final Long recvdAt = krowdmsg.getRecvdAt();
+                        final CrowdCacheProto.CrowdCacheMsg msg = CrowdCacheProto.CrowdCacheMsg.parseFrom(data);
                         switch (msg.getMsgType())
                         {
                             case GET_REQ:
-                                processGetReq(msg.getVal(), msg.getId(), cookie);
+                                getRequestExecutor.submit(new Runnable()
+                                {
+                                    @Override
+                                    public void run()
+                                    {
+                                        processGetReq(msg.getVal(), msg.getId(), cookie, recvdAt);
+                                    }
+                                });
+
                                 break;
                             case GET_RESP:
                                 processGetResp(msg.getVal(), msg.getId());
                                 break;
                         }
                     }
-                    Thread.sleep(10);
+                    else
+                        Thread.sleep(2);
                 }
             }
             catch (InterruptedException e)
@@ -164,12 +177,12 @@ public class CrowdRPC
      * @param id request id
      * @param cookie Cookie for reply
      */
-    private void processGetReq(ByteString val, Integer id, String cookie)
+    private void processGetReq(ByteString val, Integer id, String cookie, Long recvdAt)
     {
         byte[] data = val.toByteArray();
 
         // Call the registered callback
-        byte[] result = mGetReqCB._get(data);
+        byte[] result = mGetReqCB._get(data, recvdAt);
 
         // Send back reply
         CrowdCacheProto.CrowdCacheMsg.Builder reply;
