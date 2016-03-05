@@ -1,0 +1,27 @@
+syntax = "proto2";
+option java_outer_classname = "CrowdRPCProto";
+
+message CrowdMsg
+{
+    enum MsgType
+    {
+        GET_EVENTS = 0;
+        GET_EVENTS_RESP = 1;
+    }
+
+    required MsgType msgType = 1;
+    required uint32 id = 2;
+    optional GetEventsReq getEventsReq = 3;
+    optional GetEventsResp getEventsResp = 4;
+}
+
+message GetEventsReq
+{
+    required uint64 startTime = 1;
+    required uint64 endTime = 2;
+}
+
+message GetEventsResp
+{
+    repeated uint32 events = 1;
+}

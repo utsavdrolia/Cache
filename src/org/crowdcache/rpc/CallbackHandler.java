@@ -1,18 +1,16 @@
 package org.crowdcache.rpc;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
  * Created by utsav on 6/18/15.
- * Simple class to handle {@link GetResponseCallback}s in a separate thread
+ * Simple class to handle {@link GetEventsResponseCallback}s in a separate thread
  */
 class CallbackHandler
 {
-    private Map<Integer, GetResponseCallback> mCallbacks;
+    private Map<Integer, GetEventsResponseCallback> mCallbacks;
     private ExecutorService mExecutorService;
     CallbackHandler()
     {
@@ -24,9 +22,9 @@ class CallbackHandler
     /**
      * Register call back
      * @param id the key for which this callback
-     * @param cb The {@link GetResponseCallback}
+     * @param cb The {@link GetEventsResponseCallback}
      */
-    void putCallback(Integer id, GetResponseCallback cb)
+    void putCallback(Integer id, GetEventsResponseCallback cb)
     {
         mCallbacks.put(id, cb);
     }
@@ -35,9 +33,8 @@ class CallbackHandler
      * Call the callback for given key
      * @param id
      * @param val
-     * @return 1 if callback will be eventually called, 0 if too many callbacks already in queue to be called, -1 if no callback registered for key
      */
-    void callCallback(final Integer id, final byte[] val)
+    void callCallback(final Integer id, final List<Integer> val)
     {
         if(mCallbacks.containsKey(id))
         {

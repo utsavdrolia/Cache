@@ -6,7 +6,6 @@ import org.hyrax.AppMessage;
 import org.hyrax.Hyrax;
 
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -17,12 +16,12 @@ public class CrowdRPC
 {
     private final Hyrax mHyrax;
     private final WorkerThread mWorkerThread;
-    private final GetRequestCallback mGetReqCB;
+    private final GetEventsRequestCallback mGetReqCB;
     private Integer msgID = 0;
     private CallbackHandler mCallbackHandler;
     private ExecutorService getRequestExecutor = Executors.newSingleThreadExecutor();
 
-    public CrowdRPC(GetRequestCallback cb)
+    public CrowdRPC(GetEventsRequestCallback cb)
     {
         mCallbackHandler = new CallbackHandler();
         mHyrax = new Hyrax();
@@ -86,22 +85,22 @@ public class CrowdRPC
                         byte[] data = krowdmsg.getData();
                         final String cookie = krowdmsg.getCookie();
                         final Long recvdAt = krowdmsg.getRecvdAt();
-                        final CrowdCacheProto.CrowdCacheMsg msg = CrowdCacheProto.CrowdCacheMsg.parseFrom(data);
+                        final CrowdRPCProto.CrowdMsg msg = CrowdRPCProto.CrowdMsg.parseFrom(data);
                         switch (msg.getMsgType())
                         {
-                            case GET_REQ:
+                            case GET_EVENTS:
                                 getRequestExecutor.submit(new Runnable()
                                 {
                                     @Override
                                     public void run()
                                     {
-                                        processGetReq(msg.getVal(), msg.getId(), cookie, recvdAt);
+                                        processGetEventsReq(msg.getGetEventsReq(), msg.getId(), cookie, recvdAt);
                                     }
                                 });
 
                                 break;
-                            case GET_RESP:
-                                processGetResp(msg.getVal(), msg.getId());
+                            case GET_EVENTS_RESP:
+                                processGetResp(msg.getGetEventsResp().getEventsList(), msg.getId());
                                 break;
                         }
                     }
@@ -120,42 +119,49 @@ public class CrowdRPC
     }
 
     /**
-     * Get the value for a key by querying some peers
-     * @param data The data to be queried
-     * @param callBack The  {@link GetResponseCallback} to be called when key-value is found
+     * Get the list of events by querying some peers
+     * @param starttime Interval start time
+     * @param stoptime Interval stop time
+     * @param callBack The callback to call when results are available
      * @param i Number of peers to query
-     * @return
+     * @return Number of peers contacted
      */
-    public int get(byte[] data, GetResponseCallback callBack, int i)
+    public int getEvents(Long starttime, Long stoptime, GetEventsResponseCallback callBack, int i)
     {
         // Get new ID
         Integer id = getnextid();
 
         // Broadcast message
-        byte[] krowdmsg = CrowdCacheProto.CrowdCacheMsg.newBuilder().
-                setMsgType(CrowdCacheProto.CrowdCacheMsg.MsgType.GET_REQ).
+        byte[] krowdmsg = CrowdRPCProto.CrowdMsg.newBuilder().
+                setMsgType(CrowdRPCProto.CrowdMsg.MsgType.GET_EVENTS).
                 setId(id).
-                setVal(ByteString.copyFrom(data)).
+                setGetEventsReq(CrowdRPCProto.GetEventsReq.newBuilder().
+                        setStartTime(starttime).
+                        setEndTime(stoptime).build()).
                 build().toByteArray();
         mCallbackHandler.putCallback(id, callBack);
         return mHyrax.multicast(krowdmsg, i);
     }
 
     /**
-     * Get the value for a key
-     * @param data The data to be queried
-     * @param callBack The  {@link GetResponseCallback} to be called when key-value is found
+     * Get the list of events by querying all peers
+     * @param starttime Interval start time
+     * @param stoptime Interval stop time
+     * @param callBack The callback to call when results are available
+     * @return Number of peers contacted
      */
-    public int get(byte[] data, GetResponseCallback callBack)
+    public int getEvents(Long starttime, Long stoptime, GetEventsResponseCallback callBack)
     {
         // Get new ID
         Integer id = getnextid();
 
         // Broadcast message
-        byte[] krowdmsg = CrowdCacheProto.CrowdCacheMsg.newBuilder().
-                setMsgType(CrowdCacheProto.CrowdCacheMsg.MsgType.GET_REQ).
+        byte[] krowdmsg = CrowdRPCProto.CrowdMsg.newBuilder().
+                setMsgType(CrowdRPCProto.CrowdMsg.MsgType.GET_EVENTS).
                 setId(id).
-                setVal(ByteString.copyFrom(data)).
+                setGetEventsReq(CrowdRPCProto.GetEventsReq.newBuilder().
+                        setStartTime(starttime).
+                        setEndTime(stoptime).build()).
                 build().toByteArray();
         mCallbackHandler.putCallback(id, callBack);
         return mHyrax.broadcast(krowdmsg);
@@ -166,30 +172,32 @@ public class CrowdRPC
      * @param id id of request
      * @param result Retrieved value
      */
-    private void processGetResp(ByteString result, int id)
+    private void processGetResp(List<Integer> result, int id)
     {
-        mCallbackHandler.callCallback(id, result.toByteArray());
+        mCallbackHandler.callCallback(id, result);
     }
 
     /**
-     * Process Get request from peer
+     * Process Get Events request from peer
      * @param val Requested data
      * @param id request id
      * @param cookie Cookie for reply
      */
-    private void processGetReq(ByteString val, Integer id, String cookie, Long recvdAt)
+    private void processGetEventsReq(CrowdRPCProto.GetEventsReq val, Integer id, String cookie, Long recvdAt)
     {
-        byte[] data = val.toByteArray();
+        Long start = val.getStartTime();
+        Long end = val.getEndTime();
 
         // Call the registered callback
-        byte[] result = mGetReqCB._get(data, recvdAt);
+        List<Integer> result = mGetReqCB.get(start, end, recvdAt);
 
         // Send back reply
-        CrowdCacheProto.CrowdCacheMsg.Builder reply;
-        reply = CrowdCacheProto.CrowdCacheMsg.newBuilder().
-                setMsgType(CrowdCacheProto.CrowdCacheMsg.MsgType.GET_RESP).
+        CrowdRPCProto.CrowdMsg.Builder reply;
+        reply = CrowdRPCProto.CrowdMsg.newBuilder().
+                setMsgType(CrowdRPCProto.CrowdMsg.MsgType.GET_EVENTS_RESP).
                 setId(id).
-                setVal(ByteString.copyFrom(result));
+                setGetEventsResp(CrowdRPCProto.GetEventsResp.newBuilder().
+                    addAllEvents(result));
         mHyrax.reply(cookie, reply.build().toByteArray());
     }
 
