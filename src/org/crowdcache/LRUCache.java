@@ -8,11 +8,18 @@ import java.util.Map;
  */
 public class LRUCache<K extends Object, V extends Object> extends LinkedHashMap<K, V>
 {
-    Integer size;
+    private Integer size;
     public LRUCache(Integer size)
     {
-        super(size,5.0f, false);
+        super(size,5.0f, true);
         this.size = size;
+    }
+
+    public LRUCache(Map<K, V> input, Integer size)
+    {
+        super(size,5.0f, true);
+        this.size = size;
+        this.putAll(input);
     }
 
     @Override
