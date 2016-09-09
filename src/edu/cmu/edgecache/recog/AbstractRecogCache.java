@@ -1,10 +1,13 @@
 package edu.cmu.edgecache.recog;
 
+import org.apache.commons.lang3.mutable.MutableInt;
+
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * This knownItems is different from typical caches. Given a {@link RecognizeInterface}, it looks up the given features and
+ * This cache is different from typical caches. Given a {@link RecognizeInterface}, it looks up the given features and
  * matches it to a cached key. If nothing is found, it returns null. It is expected that the instantiating object will
  * then call {@link AbstractRecogCache#put(Object, Object)} to insert the the propoer K-V into the knownItems.
  * However, even at this point, recognition requests for the inserted V may not be replied correctly
@@ -16,7 +19,7 @@ import java.util.Map;
 public abstract class AbstractRecogCache<K extends Object, V>
 {
     protected Map<K, V> knownItems;
-    protected Map<K, Integer> counters;
+    protected Map<K, MutableInt> counters;
     protected int size;
     protected long total_queries = 0;
     protected RecognizeInterface<K, V> recognizer;
@@ -48,7 +51,7 @@ public abstract class AbstractRecogCache<K extends Object, V>
     }
 
     /**
-     * Put training feature in knownItems.
+     * Put training feature in cache.
      * @param feature
      * @param key
      */
@@ -63,7 +66,14 @@ public abstract class AbstractRecogCache<K extends Object, V>
             // Call training method
             onNewItem();
         }
+        else if(!getCachedItems().contains(key))
+            onNewItem();
     }
+
+    /**
+     * @return The items that are actually stored in the cache
+     */
+    protected abstract Collection<K> getCachedItems();
 
     /**
      * Called when new k-v pair is inserted in the knownItems
@@ -78,9 +88,9 @@ public abstract class AbstractRecogCache<K extends Object, V>
     public synchronized void updateCounter(K key, Integer value)
     {
         if(!this.counters.containsKey(key))
-            this.counters.put(key, value);
+            this.counters.put(key, new MutableInt(value));
         else
-            this.counters.put(key, this.counters.get(key) + value);
+            this.counters.get(key).add(value);
         total_queries=+value;
     }
 
