@@ -1,0 +1,15 @@
+syntax = "proto2";
+option java_outer_classname = "CrowdCacheProto";
+
+message CrowdCacheMsg
+{
+    enum MsgType
+    {
+        GET_REQ = 0;
+        GET_RESP = 1;
+    }
+
+    required MsgType msgType = 1;
+    required uint32 id = 2;
+    required bytes val = 3;
+}
