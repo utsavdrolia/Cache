@@ -1,28 +1,29 @@
 package edu.cmu.edgecache.recog;
 
-import org.apache.commons.lang3.mutable.MutableInt;
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
-import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
  * This cache is different from typical caches. Given a {@link RecognizeInterface}, it looks up the given features and
  * matches it to a cached key. If nothing is found, it returns null. It is expected that the instantiating object will
- * then call {@link AbstractRecogCache#put(Object, Object)} to insert the the propoer K-V into the knownItems.
+ * then call {@link AbstractRecogCache#put(K, V)} to insert the the propoer K-V into the knownItems.
  * However, even at this point, recognition requests for the inserted V may not be replied correctly
  * since the underlying recognizer may not be trained yet. That depends on the extending class and how it chooses to implement
  * the {@link AbstractRecogCache#onNewItem()} function.
  * Extend this class and implement LFU or other such caching mechanisms.
  * Created by utsav on 9/7/16.
  */
-public abstract class AbstractRecogCache<K extends Object, V>
+public abstract class AbstractRecogCache<K extends Comparable, V>
 {
     protected Map<K, V> knownItems;
-    protected Map<K, MutableInt> counters;
+    protected FrequencyCounter<K> counters;
     protected int size;
-    protected long total_queries = 0;
     protected RecognizeInterface<K, V> recognizer;
+    private DescriptiveStatistics missLatency = new DescriptiveStatistics(10);
+
 
     /**
      *
@@ -32,7 +33,7 @@ public abstract class AbstractRecogCache<K extends Object, V>
     {
         this.recognizer = recognizer;
         this.knownItems = new HashMap<>();
-        this.counters = new HashMap<>();
+        this.counters = new FrequencyCounter<>();
     }
 
     /**
@@ -45,7 +46,7 @@ public abstract class AbstractRecogCache<K extends Object, V>
         // Check cache
         K result = recognizer.recognize(query);
         // Check if we have a result
-        if(recognizer.valid(result))
+        if(recognizer.isValid(result))
             updateCounter(result, 1);
         return result;
     }
@@ -73,7 +74,7 @@ public abstract class AbstractRecogCache<K extends Object, V>
     /**
      * @return The items that are actually stored in the cache
      */
-    protected abstract Collection<K> getCachedItems();
+    protected abstract List<K> getCachedItems();
 
     /**
      * Called when new k-v pair is inserted in the knownItems
@@ -87,12 +88,10 @@ public abstract class AbstractRecogCache<K extends Object, V>
      */
     public synchronized void updateCounter(K key, Integer value)
     {
-        if(!this.counters.containsKey(key))
-            this.counters.put(key, new MutableInt(value));
-        else
-            this.counters.get(key).add(value);
-        total_queries=+value;
+        counters.incrementValue(key, value);
     }
+
+
 
     /**
      * @param key
@@ -111,5 +110,29 @@ public abstract class AbstractRecogCache<K extends Object, V>
     public V getValue(K key)
     {
         return knownItems.get(key);
+    }
+
+    public double getMissPenalty()
+    {
+        return missLatency.getMean();
+    }
+
+    /**
+     * Caller class will need to update miss latency that the cache can use for internal calculations
+     * @param missLatency
+     */
+    public void setMissLatency(long missLatency)
+    {
+        this.missLatency.addValue(missLatency);
+    }
+
+    public K invalid()
+    {
+        return recognizer.invalid();
+    }
+
+    public boolean isValid(K key)
+    {
+        return recognizer.isValid(key);
     }
 }

@@ -1,28 +1,27 @@
 package edu.cmu.edgecache.recog;
 
-import org.apache.commons.lang3.mutable.MutableInt;
-
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Implements the LFU caching mechanism
  * Created by utsav on 9/8/16.
  */
-public class LFURecogCache<K, V> extends AbstractRecogCache<K,V>
+public class LFURecogCache<K extends Comparable, V> extends AbstractRecogCache<K,V>
 {
-    private Map<K, MutableInt> cachedItems;
+    private List<K> cachedItems = null;
 
     public LFURecogCache(RecognizeInterface<K, V> recognizer, int size)
     {
         super(recognizer);
         this.size = size;
-        cachedItems = new HashMap<>(this.size, 2);
     }
 
     @Override
-    protected Collection<K> getCachedItems()
+    protected List<K> getCachedItems()
     {
-        return this.cachedItems.keySet();
+        return cachedItems;
     }
 
     /**
@@ -33,55 +32,29 @@ public class LFURecogCache<K, V> extends AbstractRecogCache<K,V>
     protected void onNewItem()
     {
         System.out.println("OnNewItem called");
-        List<Map.Entry<K, MutableInt>> orderedEntries = getOrderedEntries();
-        System.out.println("Ordered Entries:" + orderedEntries.toString());
-
-        int previous_sum = 0;
-        for (Map.Entry<K , MutableInt> entry : cachedItems.entrySet())
+        List<K> currentOrderedEntries = counters.getOrderedEntries(this.size);
+//        System.out.println("Ordered Entries:" + counters.getCounts(currentOrderedEntries));
+        boolean updatecache = false;
+        if(cachedItems != null)
         {
-            previous_sum+=entry.getValue().getValue();
+            if(counters.getSumFreq(currentOrderedEntries) > counters.getSumFreq(cachedItems))
+                updatecache = true;
         }
+        else
+            updatecache = true;
 
-        int new_sum = 0;
-        for (Map.Entry<K , MutableInt> entry : orderedEntries)
+        // If new sum is greater than previous sum, update cache
+        if(updatecache)
         {
-            new_sum+=entry.getValue().getValue();
-        }
-        // If new sum is same as previous sum, no change is needed
-        if(new_sum > previous_sum)
-        {
-            cachedItems.clear();
+            cachedItems = currentOrderedEntries;
             Map<K, V> trainingMap = new HashMap<>();
-            for (Map.Entry<K , MutableInt> entry : orderedEntries)
+            for (K entry : currentOrderedEntries)
             {
-                cachedItems.put(entry.getKey(), counters.get(entry.getKey()));
-                trainingMap.put(entry.getKey(), knownItems.get(entry.getKey()));
+                trainingMap.put(entry, knownItems.get(entry));
             }
             this.recognizer.train(trainingMap);
         }
-        System.out.println("Cached Entries:" + cachedItems.toString());
-    }
-
-    /**
-     * Returns an ordered list of most popular keys with maximum {@link this#size} items.
-     * @return an ordered list of most popular keys
-     */
-    private List<Map.Entry<K, MutableInt>> getOrderedEntries()
-    {
-        List<Map.Entry<K,MutableInt>> entries = new ArrayList<>(counters.entrySet());
-        Collections.sort(entries, new Comparator<Map.Entry<K, MutableInt>>()
-        {
-            @Override
-            public int compare(Map.Entry<K, MutableInt> o1, Map.Entry<K, MutableInt> o2)
-            {
-                return o2.getValue().compareTo(o1.getValue());
-            }
-        });
-
-        if(entries.size() > this.size)
-            return entries.subList(0, size);
-        else
-            return entries;
+        System.out.println("Cache:" + cachedItems.size());
     }
 
 }

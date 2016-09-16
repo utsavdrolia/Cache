@@ -21,9 +21,12 @@ public interface RecognizeInterface<K extends Object, V>
     public void train(Map<K, V> trainingMap);
 
     /**
-     * Tells us if a result is valid
+     * Tells us if a result is isValid
      * @param result
      * @return
      */
-    boolean valid(K result);
+    boolean isValid(K result);
+
+    public K invalid();
+
 }
