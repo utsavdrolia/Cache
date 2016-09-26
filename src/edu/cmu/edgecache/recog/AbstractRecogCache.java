@@ -18,11 +18,14 @@ import java.util.Map;
  */
 public abstract class AbstractRecogCache<K extends Comparable, V>
 {
+    private long INTERVAL;
     protected Map<K, V> knownItems;
     protected FrequencyCounter<K> counters;
     protected int size;
     protected RecognizeInterface<K, V> recognizer;
     private DescriptiveStatistics missLatency = new DescriptiveStatistics(10);
+    private boolean isIntervalSet = false;
+    private long prev_interval = 0;
 
 
     /**
@@ -69,17 +72,14 @@ public abstract class AbstractRecogCache<K extends Comparable, V>
         }
         else if(!getCachedItems().contains(key))
             onNewItem();
+
+        if(isIntervalSet)
+            if((counters.getSumFreq() - prev_interval) >= this.INTERVAL)
+            {
+                prev_interval = counters.getSumFreq();
+                onInterval();
+            }
     }
-
-    /**
-     * @return The items that are actually stored in the cache
-     */
-    protected abstract List<K> getCachedItems();
-
-    /**
-     * Called when new k-v pair is inserted in the knownItems
-     */
-    protected abstract void onNewItem();
 
     /**
      * Update the query counter for given key
@@ -134,5 +134,38 @@ public abstract class AbstractRecogCache<K extends Comparable, V>
     public boolean isValid(K key)
     {
         return recognizer.isValid(key);
+    }
+
+    /**
+     * Set Interval if implementing classes want to be invoked at a regular interval
+     * @param interval
+     */
+    protected void setInterval(long interval)
+    {
+        this.INTERVAL = interval;
+        this.isIntervalSet = true;
+    }
+
+    /**
+     * @return The items that are actually stored in the cache
+     */
+    protected abstract List<K> getCachedItems();
+
+    /**
+     * Called when new k-v pair is inserted in the knownItems
+     */
+    protected void onNewItem()
+    {}
+
+    /**
+     * Called when set interval is reached
+     */
+    protected void onInterval()
+    {}
+
+
+    public int getSize()
+    {
+        return this.size;
     }
 }
