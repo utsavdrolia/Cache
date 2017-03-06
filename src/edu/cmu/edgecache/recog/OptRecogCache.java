@@ -11,6 +11,7 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 
 /**
+ * Optimized LFU Cache for image recognition- an adaptive LFU cache that measures latencies and adapts by changing cache size
  * Created by utsav on 9/14/16.
  */
 public class OptRecogCache<K extends Comparable, V> extends AbstractRecogCache<K, V>
