@@ -1,4 +1,6 @@
 import edu.cmu.edgecache.recog.predictors.MarkovPredictor;
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.math3.stat.StatUtils;
 
 import java.io.*;
 import java.util.*;
@@ -28,7 +30,7 @@ public class TestMarkov
             List<String> test_files = new ArrayList<>();
             List<String> train_files = new ArrayList<>();
             int i = 0;
-            for (; i < 0.8*listOfFiles.length; i++)
+            for (; i < 0.2*listOfFiles.length; i++)
             {
                 test_files.add(querydir + File.separator + listOfFiles[i]);
             }
@@ -53,7 +55,7 @@ public class TestMarkov
             MarkovPredictor<String> predictor = new MarkovPredictor<>(all_objects, 1);
 
             train(predictor, train_files);
-            test(predictor, test_files);
+            System.out.println("Top-10 accuracy:" +  StatUtils.mean(test(predictor, test_files)));
 
         } else
         {
@@ -69,25 +71,27 @@ public class TestMarkov
             List<String> queries = parseQueries(path);
             for (int i = 0; i < queries.size() - 1; i++)
             {
-                predictor.updateTransition(queries.get(i), queries.get(i + 1));
+                predictor.incrementTransition(queries.get(i), queries.get(i + 1));
             }
         }
 
     }
 
-    public static Map<String, Map<String, Double>> test(MarkovPredictor<String> predictor,
+    public static double[] test(MarkovPredictor<String> predictor,
                                                         List<String> query_paths) throws IOException
     {
-        Map<String, Map<String, Double>> results = new HashMap<>();
+        List<Double> matches = new ArrayList<>();
 
         for (String path : query_paths)
         {
             List<String> queries = parseQueries(path);
             for (int i = 0; i < queries.size() - 1; i++)
             {
+                // Get PDF
                 Map<String, Double> pdf = predictor.getNextPDF(queries.get(i));
-                List<Map.Entry<String, Double>> list = new ArrayList<>(pdf.entrySet());
-                Collections.sort(list, new Comparator<Map.Entry<String, Double>>()
+                // Sort PDF in descending
+                List<Map.Entry<String, Double>> sorted_pdf = new ArrayList<>(pdf.entrySet());
+                Collections.sort(sorted_pdf, new Comparator<Map.Entry<String, Double>>()
                 {
                     @Override
                     public int compare(Map.Entry<String, Double> o1, Map.Entry<String, Double> o2)
@@ -99,12 +103,23 @@ public class TestMarkov
                         return 0;
                     }
                 });
-                System.out.println("Actual:" + queries.get(i+1) +" PDF:" + list);
-                results.put(queries.get(i), pdf);
+                // Check top 10
+                boolean flag = false;
+                for (int j = 0; j < 10; j++)
+                {
+                    if(sorted_pdf.get(j).getKey().equals(queries.get(i+1)))
+                    {
+                        flag = true;
+                        break;
+                    }
+                }
+                matches.add(flag?1.0:0.0);
+
+//                System.out.println("Actual:" + queries.get(i+1) +" PDF:" + sorted_pdf);
             }
         }
 
-        return results;
+        return ArrayUtils.toPrimitive((matches.toArray(new Double[0])));
     }
 
     private static List<String> parseQueries(String path) throws IOException
