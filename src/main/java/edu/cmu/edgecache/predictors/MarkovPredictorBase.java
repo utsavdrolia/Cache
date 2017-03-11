@@ -1,4 +1,4 @@
-package edu.cmu.edgecache.recog.predictors;
+package edu.cmu.edgecache.predictors;
 
 import org.apache.commons.math3.linear.MatrixUtils;
 import org.apache.commons.math3.linear.RealMatrix;

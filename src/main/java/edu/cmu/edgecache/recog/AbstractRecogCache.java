@@ -1,9 +1,7 @@
 package edu.cmu.edgecache.recog;
 
-import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
-
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -12,18 +10,17 @@ import java.util.Map;
  * then call {@link AbstractRecogCache#put(K, V)} to insert the the propoer K-V into the knownItems.
  * However, even at this point, recognition requests for the inserted V may not be replied correctly
  * since the underlying recognizer may not be trained yet. That depends on the extending class and how it chooses to implement
- * the {@link AbstractRecogCache#onNewItem()} function.
+ * the {@link AbstractRecogCache#_put(Comparable)} function.
  * Extend this class and implement LFU or other such caching mechanisms.
  * Created by utsav on 9/7/16.
  */
-public abstract class AbstractRecogCache<K extends Comparable, V>
+public abstract class AbstractRecogCache<K extends Comparable<K>, V>
 {
     private long INTERVAL;
     protected Map<K, V> knownItems;
     protected FrequencyCounter<K> counters;
     protected int size;
     protected RecognizeInterface<K, V> recognizer;
-    private DescriptiveStatistics missLatency = new DescriptiveStatistics(10);
     private boolean isIntervalSet = false;
     private long prev_interval = 0;
 
@@ -67,11 +64,9 @@ public abstract class AbstractRecogCache<K extends Comparable, V>
         {
             // Insert in knownItems
             knownItems.put(key, feature);
-            // Call training method
-            onNewItem();
         }
-        else if(!getCachedItems().contains(key))
-            onNewItem();
+        // Call training method
+        _put(key);
 
         if(isIntervalSet)
             if((counters.getSumFreq() - prev_interval) >= this.INTERVAL)
@@ -80,18 +75,6 @@ public abstract class AbstractRecogCache<K extends Comparable, V>
                 onInterval();
             }
     }
-
-    /**
-     * Update the query counter for given key
-     * @param key Key to update
-     * @param value Value to update with
-     */
-    public synchronized void updateCounter(K key, Integer value)
-    {
-        counters.incrementValue(key, value);
-    }
-
-
 
     /**
      * @param key
@@ -112,18 +95,9 @@ public abstract class AbstractRecogCache<K extends Comparable, V>
         return knownItems.get(key);
     }
 
-    public double getMissPenalty()
+    public int getSize()
     {
-        return missLatency.getMean();
-    }
-
-    /**
-     * Caller class will need to update miss latency that the cache can use for internal calculations
-     * @param missLatency
-     */
-    public void setMissLatency(long missLatency)
-    {
-        this.missLatency.addValue(missLatency);
+        return this.size;
     }
 
     public K invalid()
@@ -135,6 +109,22 @@ public abstract class AbstractRecogCache<K extends Comparable, V>
     {
         return recognizer.isValid(key);
     }
+
+    /**
+     * Update the query counter for given key
+     * @param key Key to update
+     * @param value Value to update with
+     */
+    private synchronized void updateCounter(K key, Integer value)
+    {
+        counters.incrementValue(key, value);
+    }
+
+    /**
+     * Caller class will need to update miss latency that the cache can use for internal calculations
+     * @param missLatency
+     */
+    public abstract void updateMissLatency(long missLatency);
 
     /**
      * Set Interval if implementing classes want to be invoked at a regular interval
@@ -149,23 +139,18 @@ public abstract class AbstractRecogCache<K extends Comparable, V>
     /**
      * @return The items that are actually stored in the cache
      */
-    protected abstract List<K> getCachedItems();
+    protected abstract Collection<K> getCachedItems();
 
     /**
      * Called when new k-v pair is inserted in the knownItems
+     * @param key
+     *
      */
-    protected void onNewItem()
-    {}
+    protected abstract void _put(K key);
 
     /**
      * Called when set interval is reached
      */
-    protected void onInterval()
-    {}
+    protected abstract void onInterval();
 
-
-    public int getSize()
-    {
-        return this.size;
-    }
 }

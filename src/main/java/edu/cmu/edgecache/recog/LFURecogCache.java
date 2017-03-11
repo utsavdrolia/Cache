@@ -1,5 +1,6 @@
 package edu.cmu.edgecache.recog;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -8,7 +9,7 @@ import java.util.Map;
  * Implements the LFU caching mechanism
  * Created by utsav on 9/8/16.
  */
-public class LFURecogCache<K extends Comparable, V> extends AbstractRecogCache<K,V>
+public class LFURecogCache<K extends Comparable<K>, V> extends AbstractRecogCache<K,V>
 {
     private List<K> cachedItems = null;
 
@@ -19,7 +20,13 @@ public class LFURecogCache<K extends Comparable, V> extends AbstractRecogCache<K
     }
 
     @Override
-    protected List<K> getCachedItems()
+    public void updateMissLatency(long missLatency)
+    {
+        // No use of measuring latency here. Drop it like its hot
+    }
+
+    @Override
+    protected Collection<K> getCachedItems()
     {
         return cachedItems;
     }
@@ -27,34 +34,42 @@ public class LFURecogCache<K extends Comparable, V> extends AbstractRecogCache<K
     /**
      * Whenever a new Item not in the {@link LFURecogCache#cachedItems} is encountered,
      * train the recognizer with {@link this#size} or lesser most popular items
+     * @param key
+     *
      */
     @Override
-    protected void onNewItem()
+    protected void _put(K key)
     {
-        System.out.println("OnNewItem called");
-        List<K> currentOrderedEntries = counters.getOrderedEntries(this.size);
+        if(!cachedItems.contains(key))
+        {
+            System.out.println("OnNewItem called");
+            List<K> currentOrderedEntries = counters.getOrderedEntries(this.size);
 //        System.out.println("Ordered Entries:" + counters.getCounts(currentOrderedEntries));
-        boolean updatecache = false;
-        if(cachedItems != null)
-        {
-            if(counters.getSumFreq(currentOrderedEntries) > counters.getSumFreq(cachedItems))
-                updatecache = true;
-        }
-        else
-            updatecache = true;
-
-        // If new sum is greater than previous sum, update cache
-        if(updatecache)
-        {
-            cachedItems = currentOrderedEntries;
-            Map<K, V> trainingMap = new HashMap<>();
-            for (K entry : currentOrderedEntries)
+            boolean updatecache = false;
+            if (cachedItems != null)
             {
-                trainingMap.put(entry, knownItems.get(entry));
+                if (counters.getSumFreq(currentOrderedEntries) > counters.getSumFreq(cachedItems))
+                    updatecache = true;
+            } else
+                updatecache = true;
+
+            // If new sum is greater than previous sum, update cache
+            if (updatecache)
+            {
+                cachedItems = currentOrderedEntries;
+                Map<K, V> trainingMap = new HashMap<>();
+                for (K entry : currentOrderedEntries)
+                {
+                    trainingMap.put(entry, knownItems.get(entry));
+                }
+                this.recognizer.train(trainingMap);
             }
-            this.recognizer.train(trainingMap);
+            System.out.println("Cache:" + cachedItems.size());
         }
-        System.out.println("Cache:" + cachedItems.size());
     }
+
+    @Override
+    protected void onInterval()
+    {}
 
 }

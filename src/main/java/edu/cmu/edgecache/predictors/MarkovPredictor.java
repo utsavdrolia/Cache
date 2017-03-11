@@ -1,4 +1,4 @@
-package edu.cmu.edgecache.recog.predictors;
+package edu.cmu.edgecache.predictors;
 
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.DualHashBidiMap;
