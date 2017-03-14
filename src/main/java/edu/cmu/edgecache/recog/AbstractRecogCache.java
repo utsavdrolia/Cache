@@ -86,6 +86,14 @@ public abstract class AbstractRecogCache<K extends Comparable<K>, V>
     }
 
     /**
+     *
+     * @return The Items in the knownItems
+     */
+    public Collection<K> getAllKeys()
+    {
+        return this.knownItems.keySet();
+    }
+    /**
      * Return Value for given Key
      * @param key
      * @return
@@ -152,5 +160,4 @@ public abstract class AbstractRecogCache<K extends Comparable<K>, V>
      * Called when set interval is reached
      */
     protected abstract void onInterval();
-
 }
