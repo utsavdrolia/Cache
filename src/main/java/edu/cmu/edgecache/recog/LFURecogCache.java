@@ -1,5 +1,8 @@
 package edu.cmu.edgecache.recog;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -12,6 +15,8 @@ import java.util.Map;
 public class LFURecogCache<K extends Comparable<K>, V> extends AbstractRecogCache<K,V>
 {
     private List<K> cachedItems = null;
+    private final static Logger logger = LoggerFactory.getLogger(LFURecogCache.class);
+
 
     public LFURecogCache(RecognizeInterface<K, V> recognizer, int size)
     {
@@ -40,32 +45,29 @@ public class LFURecogCache<K extends Comparable<K>, V> extends AbstractRecogCach
     @Override
     protected void _put(K key)
     {
-        if(!cachedItems.contains(key))
+        logger.debug("_put called with key:" + key.toString());
+        List<K> currentOrderedEntries = counters.getOrderedEntries(this.size);
+        boolean updatecache = false;
+        if (cachedItems == null)
+            updatecache = true;
+        else if(!cachedItems.contains(key))
         {
-            System.out.println("OnNewItem called");
-            List<K> currentOrderedEntries = counters.getOrderedEntries(this.size);
-//        System.out.println("Ordered Entries:" + counters.getCounts(currentOrderedEntries));
-            boolean updatecache = false;
-            if (cachedItems != null)
-            {
-                if (counters.getSumFreq(currentOrderedEntries) > counters.getSumFreq(cachedItems))
-                    updatecache = true;
-            } else
+            if (counters.getSumFreq(currentOrderedEntries) > counters.getSumFreq(cachedItems))
                 updatecache = true;
-
-            // If new sum is greater than previous sum, update cache
-            if (updatecache)
-            {
-                cachedItems = currentOrderedEntries;
-                Map<K, V> trainingMap = new HashMap<>();
-                for (K entry : currentOrderedEntries)
-                {
-                    trainingMap.put(entry, knownItems.get(entry));
-                }
-                this.recognizer.train(trainingMap);
-            }
-            System.out.println("Cache:" + cachedItems.size());
         }
+
+        // If new sum is greater than previous sum, update cache
+        if (updatecache)
+        {
+            cachedItems = currentOrderedEntries;
+            Map<K, V> trainingMap = new HashMap<>();
+            for (K entry : currentOrderedEntries)
+            {
+                trainingMap.put(entry, knownItems.get(entry));
+            }
+            this.recognizer.train(trainingMap);
+        }
+        logger.debug("Cache:" + cachedItems.size());
     }
 
     @Override

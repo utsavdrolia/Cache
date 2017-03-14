@@ -10,7 +10,7 @@ import java.util.*;
  */
 public class PrefetchedCache<K extends Comparable<K>, V> extends AbstractRecogCache<K, V>
 {
-    private Set<K> cachedItems = null;
+    private Set<K> cachedItems = new HashSet<>();
 
     // Latency predictor
     private LatencyEstimator latencyPredictor;
@@ -49,7 +49,6 @@ public class PrefetchedCache<K extends Comparable<K>, V> extends AbstractRecogCa
             if(latencyPredictor.expectedLatency(best_size, p_cached) > best_latency)
             {
                 // Previous size was best size
-                best_size -= 1;
                 break;
             }
             training_list.add(pdf_entry.getKey());
