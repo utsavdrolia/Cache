@@ -1,4 +1,4 @@
-import edu.cmu.edgecache.recog.predictors.MarkovPredictor;
+import edu.cmu.edgecache.predictors.MarkovPredictor;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.math3.stat.StatUtils;
 
