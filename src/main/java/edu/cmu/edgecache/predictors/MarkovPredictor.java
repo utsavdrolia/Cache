@@ -2,6 +2,8 @@ package edu.cmu.edgecache.predictors;
 
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.DualHashBidiMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.List;
@@ -18,6 +20,7 @@ public class MarkovPredictor<T>
 {
     private MarkovPredictorBase predictor;
     private BidiMap<T, Integer> stateIDMap;
+    final static Logger logger = LoggerFactory.getLogger(MarkovPredictor.class);
 
     /**
      * Create predictor with no priors
@@ -50,6 +53,7 @@ public class MarkovPredictor<T>
         for (T state :
                 states)
         {
+            logger.debug("Adding state to Predictor:" + state.toString());
             this.stateIDMap.put(state, this.stateIDMap.size());
         }
     }
@@ -76,6 +80,7 @@ public class MarkovPredictor<T>
         Map<T, Double> pdf = new HashMap<>();
 
         int from = stateIDMap.get(from_state);
+        logger.debug("From State:" + from_state + " maps to ID:" + from);
         double[] probs = this.predictor.getNextPDF(from);
 
         for (int i = 0; i < probs.length; i++)
