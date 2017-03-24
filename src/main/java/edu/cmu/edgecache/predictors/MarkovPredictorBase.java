@@ -71,7 +71,17 @@ public class MarkovPredictorBase
      */
     public void incrementTransition(int from_id, int to_id)
     {
-        this.transitionMatrix.addToEntry(from_id, to_id, 1.0);
+        this.addToTransition(from_id, to_id, 1.0);
+    }
+
+    /**
+     * Increment the transition count
+     * @param from_id Originating state
+     * @param to_id Destination state
+     */
+    public void addToTransition(int from_id, int to_id, double add)
+    {
+        this.transitionMatrix.addToEntry(from_id, to_id, add);
     }
 
     /**

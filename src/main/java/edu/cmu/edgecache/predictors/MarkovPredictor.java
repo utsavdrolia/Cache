@@ -71,6 +71,19 @@ public class MarkovPredictor<T>
     }
 
     /**
+     * Add to transition
+     * @param from_state
+     * @param to_state
+     * @param add Increment transition counter by add
+     */
+    public void addToTransition(T from_state, T to_state, double add)
+    {
+        int from = stateIDMap.get(from_state);
+        int to = stateIDMap.get(to_state);
+        this.predictor.addToTransition(from, to, add);
+    }
+
+    /**
      * Distribution over next states
      * @param from_state
      * @return {@link Map<T,Double>} A map of state to probability of occurrence
