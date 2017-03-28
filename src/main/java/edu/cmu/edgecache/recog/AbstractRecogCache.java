@@ -1,5 +1,8 @@
 package edu.cmu.edgecache.recog;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,6 +27,7 @@ public abstract class AbstractRecogCache<K extends Comparable<K>, V>
     private boolean isIntervalSet = false;
     private long prev_interval = 0;
 
+    final static Logger logger = LoggerFactory.getLogger(AbstractRecogCache.class);
 
     /**
      *
@@ -43,12 +47,29 @@ public abstract class AbstractRecogCache<K extends Comparable<K>, V>
      */
     public K get(V query)
     {
+        isEmpty();
+        logger.debug("Known items is empty: " + knownItems.isEmpty());
         // Check cache
         K result = recognizer.recognize(query);
         // Check if we have a result
         if(recognizer.isValid(result))
             updateCounter(result, 1);
         return result;
+    }
+
+    public boolean isEmpty()
+    {
+        if(getCachedItems() != null)
+        {
+            if(getCachedItems().isEmpty())
+            {
+                logger.debug("Actual Cached items is empty");
+                return true;
+            }
+            return false;
+        }
+        logger.debug("Actual Cached items is null");
+        return true;
     }
 
     /**
