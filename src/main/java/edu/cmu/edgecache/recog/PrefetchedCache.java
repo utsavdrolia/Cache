@@ -2,6 +2,8 @@ package edu.cmu.edgecache.recog;
 
 import edu.cmu.edgecache.predictors.LatencyEstimator;
 import org.apache.commons.math3.analysis.polynomials.PolynomialFunction;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
@@ -10,10 +12,11 @@ import java.util.*;
  */
 public class PrefetchedCache<K extends Comparable<K>, V> extends AbstractRecogCache<K, V>
 {
-    private Set<K> cachedItems = new HashSet<>();
+    private Set<K> prefetchedItems = new HashSet<>();
 
     // Latency predictor
     private LatencyEstimator latencyPredictor;
+    final static Logger logger = LoggerFactory.getLogger(PrefetchedCache.class);
 
     /**
      * @param recognizer The underlying recognizer to use for lookups
@@ -29,46 +32,83 @@ public class PrefetchedCache<K extends Comparable<K>, V> extends AbstractRecogCa
      * @param pdf
      * @return
      */
-    public synchronized Collection<K> updatePDF(Map<K, Double> pdf)
+    public synchronized Map<K, Double> updatePDF(K currentItem, Map<K, Double> pdf)
     {
-        // Order according to value
-        LinkedHashMap<K, Double> orderedPdf = Utils.orderedMap(pdf);
-        List<K> training_list = new ArrayList<>();
-        List<K> prefetchList = new ArrayList<>();
-        Double minLatency = Double.MAX_VALUE;
-        int best_size = 0;
-        double p_cached = 0;
-        double best_latency = Double.MAX_VALUE;
-        // Find best size
-        for (Map.Entry<K, Double> pdf_entry :
-                orderedPdf.entrySet())
+        double misslatency = latencyPredictor.getMissPenalty();
+        logger.debug("Miss Penalty=" + misslatency);
+
+        Map<K, Double> prefetchList = new HashMap<>();
+        int best_size = 1;
+
+        logger.debug("Clear cached items");
+        prefetchedItems.clear();
+
+        // First check if fetching current Item is worth it
+        if(latencyPredictor.expectedLatency(best_size, 1.0) < misslatency)
         {
-            // P(cached) is dependent on size = sum(top-k most likely items)
-            p_cached += pdf_entry.getValue();
-            best_size += 1;
-            if(latencyPredictor.expectedLatency(best_size, p_cached) > best_latency)
+            logger.debug("Add current item to training list");
+            List<K> training_list = new ArrayList<>();
+            double p_cached = 0;
+            // Order according to value
+            LinkedHashMap<K, Double> orderedPdf = Utils.orderedMap(pdf);
+            double best_latency = Double.MAX_VALUE;
+            // Find best size
+            for (Map.Entry<K, Double> pdf_entry : orderedPdf.entrySet())
             {
-                // Previous size was best size
-                break;
+                Double prob = pdf_entry.getValue();
+                if(prob > 0)
+                {
+                    // logger.debug("PDF item:" + pdf_entry.getKey() + " prob:" + prob);
+                    // P(cached) is dependent on size = sum(top-k most likely items)
+                    p_cached += pdf_entry.getValue();
+                    best_size += 1;
+                    double lat = latencyPredictor.expectedLatency(best_size, p_cached);
+                    logger.debug("Predicted latency=" + lat + " for k=" + best_size);
+                    if (lat > best_latency)
+                    {
+                        // Previous size was best size
+                        best_size -= 1;
+                        break;
+                    }
+                    best_latency = lat;
+                    training_list.add(pdf_entry.getKey());
+                }
+                else
+                {
+                    logger.debug("Prob=0");
+                    break;
+                }
             }
-            training_list.add(pdf_entry.getKey());
-        }
 
-        // clear cached items
-        cachedItems.clear();
-        // Use training list to find out which items are known, which need to be prefetched
-        for (K item :
-                training_list)
+            // Ensure that the best latency is faster than miss latency
+            // If not, only cache current item
+            if(best_latency > misslatency)
+            {
+                training_list.clear();
+                best_size = 1;
+            }
+            training_list.add(currentItem);
+
+            logger.debug("Best Size predicted=" + best_size);
+            // Use training list to find out which items are known, which need to be prefetched
+            for (K item : training_list)
+            {
+                // Update prefetchedItems with known relevant items
+                if (knownItems.containsKey(item))
+                    prefetchedItems.add(item);
+                else
+                    if (item.equals(currentItem))
+                        prefetchList.put(item, 1.0);
+                    else
+                        prefetchList.put(item, orderedPdf.get(item));
+            }
+            // Train using prefetchedItems
+            trainCachedItems();
+        }
+        else
         {
-            // Update cachedItems with known relevant items
-            if(knownItems.containsKey(item))
-                cachedItems.add(item);
-            else
-                prefetchList.add(item);
+            logger.debug("Miss Penalty too low. Not fetching current or any other items");
         }
-
-        // Train using cachedItems
-        trainCachedItems();
         // return items to be prefetched
         // Prefetcher will insert items using put
         return prefetchList;
@@ -77,9 +117,9 @@ public class PrefetchedCache<K extends Comparable<K>, V> extends AbstractRecogCa
     @Override
     protected synchronized void _put(K key)
     {
-        if(!cachedItems.contains(key))
+        if(!prefetchedItems.contains(key))
         {
-            cachedItems.add(key);
+            prefetchedItems.add(key);
             trainCachedItems();
         }
     }
@@ -91,9 +131,9 @@ public class PrefetchedCache<K extends Comparable<K>, V> extends AbstractRecogCa
     }
 
     @Override
-    protected Collection<K> getCachedItems()
+    protected synchronized Collection<K> getCachedItems()
     {
-        return cachedItems;
+        return prefetchedItems;
     }
 
     @Override
@@ -106,8 +146,9 @@ public class PrefetchedCache<K extends Comparable<K>, V> extends AbstractRecogCa
     private void trainCachedItems()
     {
         Map<K, V> trainingMap = new HashMap<>();
-        for (K entry : cachedItems)
+        for (K entry : prefetchedItems)
         {
+            logger.debug("Training Cache with:" + entry);
             trainingMap.put(entry, knownItems.get(entry));
         }
         this.recognizer.train(trainingMap);
