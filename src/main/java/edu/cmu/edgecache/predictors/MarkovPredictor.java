@@ -5,6 +5,7 @@ import org.apache.commons.collections4.bidimap.DualHashBidiMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -112,5 +113,10 @@ public class MarkovPredictor<T>
     public T predict(T from)
     {
         return this.stateIDMap.getKey(this.predictor.predict(this.stateIDMap.get(from)));
+    }
+
+    public Collection<T> getStates()
+    {
+        return stateIDMap.keySet();
     }
 }
