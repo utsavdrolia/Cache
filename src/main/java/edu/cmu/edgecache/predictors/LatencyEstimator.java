@@ -33,23 +33,23 @@ public class LatencyEstimator
      */
     public Double expectedLatency(int k, Double probCacheHit)
     {
-//        System.out.println("----------------------------------------------------------------");
-//        System.out.println("f(k)=" + f_k);
-//        System.out.println("recall(k)=" + recall_k);
-//        System.out.println("k=" + k);
-//        System.out.println("P(cached)=" + probCacheHit);
-        // 1 - recall(k)*P(cached)
-        Double total_miss_rate = 1 - recall_k.value(k) * probCacheHit;
-//        System.out.println("1 - recall(k)*P(cached)=" + total_miss_rate);
-        // (1 - recall(k)*P(cached))*(Miss_penalty)
-        Double miss_latency = total_miss_rate * this.getMissPenalty();
-//        System.out.println("(1 - recall(k)*P(cached))*(Miss_penalty)=" + miss_latency);
-        // f(k) + (1 - recall(k)*P(cached))*(Miss_penalty)
-        Double E_L = f_k.value(k) + miss_latency;
-//        System.err.println("EL=" + E_L);
-//        System.out.println("----------------------------------------------------------------");
+        double recall_val = recall_k.value(k);
+        double f_k_val = f_k.value(k);
+        if((!Double.isNaN(recall_val)) && (!Double.isNaN(f_k_val)))
+        {
+            // 1 - recall(k)*P(cached)
+            Double total_miss_rate = 1 - recall_val * probCacheHit;
+            // (1 - recall(k)*P(cached))*(Miss_penalty)
+            Double miss_latency = total_miss_rate * this.getMissPenalty();
+            // f(k) + (1 - recall(k)*P(cached))*(Miss_penalty)
+            return f_k_val + miss_latency;
+        }
+        return Double.NaN;
+    }
 
-        return E_L;
+    public Double getF_K(int k)
+    {
+        return f_k.value(k);
     }
 
     public Double getMissPenalty()
