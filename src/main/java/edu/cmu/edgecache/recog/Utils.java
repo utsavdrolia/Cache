@@ -1,5 +1,7 @@
 package edu.cmu.edgecache.recog;
 
+import org.apache.commons.lang3.tuple.Pair;
+
 import java.util.*;
 
 /**
@@ -7,7 +9,7 @@ import java.util.*;
  */
 public class Utils
 {
-    public static <K, V extends Comparable<V>> LinkedHashMap<K, V> orderedMap(Map<K, V> map)
+    public static <K, V extends Comparable<V>> List<Pair<K, V>> orderedMap(Map<K, V> map)
     {
         List<Map.Entry<K, V>> entries = new ArrayList<>(map.entrySet());
         Collections.sort(entries, new Comparator<Map.Entry<K, V>>()
@@ -18,10 +20,10 @@ public class Utils
                 return o2.getValue().compareTo(o1.getValue());
             }
         });
-        LinkedHashMap<K, V> ret = new LinkedHashMap<>();
+        List<Pair<K, V>> ret = new ArrayList<>();
         for (Map.Entry<K, V> entry: entries)
         {
-            ret.put(entry.getKey(), entry.getValue());
+            ret.add(Pair.of(entry.getKey(), entry.getValue()));
         }
         return ret;
     }

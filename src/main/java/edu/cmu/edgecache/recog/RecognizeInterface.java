@@ -1,5 +1,6 @@
 package edu.cmu.edgecache.recog;
 
+import java.io.IOException;
 import java.util.Map;
 
 /**
@@ -29,4 +30,11 @@ public interface RecognizeInterface<K extends Object, V>
 
     public K invalid();
 
+    /**
+     * Change the number of points being extracted from images
+     * @param num_descriptors
+     */
+    public void updateNumDescriptorsExtracted(int num_descriptors) throws IOException;
+
+    public RecognizeInterface<K,V> newRecognizer();
 }
