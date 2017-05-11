@@ -222,6 +222,15 @@ public class PrefetchedCache<K extends Comparable<K>, V> extends AbstractRecogCa
     }
 
     @Override
+    protected void _init(Map<K, V> initMap)
+    {
+        prefetchedItems.addAll(initMap.keySet());
+        logger.debug("Initializing Cache");
+        this.recognizer.train(initMap);
+        logger.debug("Initialized Cache");
+    }
+
+    @Override
     public void updateMissLatency(long missLatency)
     {
         for (Integer desc_num: this.latencyEstimatorMap.keySet())

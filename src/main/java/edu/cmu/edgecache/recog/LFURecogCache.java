@@ -3,10 +3,7 @@ package edu.cmu.edgecache.recog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Implements the LFU caching mechanism
@@ -34,6 +31,14 @@ public class LFURecogCache<K extends Comparable<K>, V> extends AbstractRecogCach
     protected Collection<K> getCachedItems()
     {
         return cachedItems;
+    }
+
+    @Override
+    protected void _init(Map<K, V> initMap)
+    {
+        cachedItems = new ArrayList<>(initMap.keySet());
+        this.recognizer.train(initMap);
+        logger.debug("Cache:" + cachedItems.size());
     }
 
     /**

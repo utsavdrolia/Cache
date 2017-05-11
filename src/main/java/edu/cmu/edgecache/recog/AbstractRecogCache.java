@@ -98,6 +98,27 @@ public abstract class AbstractRecogCache<K extends Comparable<K>, V>
     }
 
     /**
+     * Initializes the cache
+     * @param initMap
+     */
+    public void init(Map<K, V> initMap)
+    {
+        knownItems.putAll(initMap);
+        for (K key :
+                initMap.keySet())
+        {
+            updateCounter(key, 1);
+        }
+        _init(initMap);
+    }
+
+    /**
+     * Initializes the cache. Implemented by extending classes
+     * @param initMap
+     */
+    protected abstract void _init(Map<K, V> initMap);
+
+    /**
      * @param key
      * @return true if cache has key, false otherwise
      */

@@ -92,6 +92,12 @@ public class OptRecogCache<K extends Comparable<K>, V> extends AbstractRecogCach
         // No need to implement. Drop it. Instead this cache is renewed in intervals
     }
 
+    @Override
+    protected void _init(Map<K, V> initMap)
+    {
+        // No need to implement. Drop it. Instead this cache is renewed in intervals
+    }
+
     /**
      * Runs on a miss and whenever set Interval is reached
      */
